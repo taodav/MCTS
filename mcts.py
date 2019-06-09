@@ -1,5 +1,6 @@
 """
 Loosely based on https://github.com/kudkudak/python-ai-samples/blob/master/AI-UCTAlgorithm/UCT.py
+Read http://mcts.ai/about/index.html for a good description of MCTS
 """
 
 import datetime
@@ -82,14 +83,18 @@ class MonteCarloAgent(object):
         counter = 0
         while datetime.datetime.utcnow() - begin < self._runtime:
             counter += 1
-            v = self.tree_policy(root)
-            evaluation = self.defaultPolicy(v)
+            v = self.select_leaf(root)
+            evaluation = self.simulate(v)
             self.backup(v, evaluation)
 
         L = [n.getExpectedValue() for n in root.children]
         return root.children[L.index(max(L))].action
 
-    def tree_policy(self, node):
+    def simulate(self, node):
+        """Simulate from the current node"""
+        copy_env = node._environment
+
+    def select_leaf(self, node):
         while not node.isTerminal():
             if not node.isFullyExpanded():
                 return self.expand(node)
