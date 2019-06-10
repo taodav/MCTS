@@ -135,6 +135,4 @@ class GridWorld:
 
 
 if __name__ == "__main__":
-    env = GridWorld()
-    env1 = copy.deepcopy(env)
-    print("here")
+    pass

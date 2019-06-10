@@ -77,9 +77,7 @@ class MonteCarloAgent(object):
         # current game state and return it.
         root = Node(copy.deepcopy(self._environment), parent_agent=self)
         begin = datetime.datetime.utcnow()
-        counter = 0
         while datetime.datetime.utcnow() - begin < self._runtime:
-            counter += 1
             leaf = self.select_leaf(root)
             q = self.simulate(leaf)
             self.backup(leaf, q)
@@ -89,14 +87,14 @@ class MonteCarloAgent(object):
 
     def pick_move_policy(self, env):
         # Policy for simulation, currently set at random
-        return choice(list(range(env.nActions)))
+        return choice(list(range(env.nActions())))
 
     def simulate(self, node):
         """Simulate from the current node"""
-        copy_env = copy.deepcopy(node._environment)
+        copy_env = copy.deepcopy(node.env)
         simulation_depth = 0
         rewards = []
-        while not copy_env.isTerminalState() and simulation_depth <= self._max_depth:
+        while not copy_env.inTerminalState() and simulation_depth <= self._max_depth:
             action = self.pick_move_policy(copy_env)
             reward = copy_env.act(action)
             rewards.append(reward)
@@ -126,7 +124,7 @@ class MonteCarloAgent(object):
         :return: child node
         """
         action = node.actions_remaining.pop()
-        new_env = copy.deepcopy(node._environment)
+        new_env = copy.deepcopy(node.env)
         new_env.act(action)
         child_node = Node(new_env, action=action, parent_agent=self)
         child_node.parent = node
