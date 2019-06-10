@@ -44,6 +44,7 @@ class Node:
         self.N = 0
         self.Q = 0.0
         self.parent = None
+        self.children = []
 
     def getExpectedValue(self):
         """ returns expected value, if transposition option is on uses dict """
@@ -64,16 +65,12 @@ class MonteCarloAgent(object):
         self._environment = environment
         self._runtime = datetime.timedelta(seconds=kwargs.get('runtime', 10))
         self._max_depth = kwargs.get('max_depth', 100)
+        self._gamma = kwargs.get('gamma', 0.99)
         self.bestChild = best_child_policy().bestChild
         self.Qdict = defaultdict(float)
         self.Ndict = defaultdict(float)
 
         self._states = []
-
-    def update(self):
-        # Takes a game state, and appends it to the history.
-        state = self._environment.observe()[0]
-        self._states.append(state)
 
     def get_action(self):
         # Calculate the best move from the
@@ -83,18 +80,37 @@ class MonteCarloAgent(object):
         counter = 0
         while datetime.datetime.utcnow() - begin < self._runtime:
             counter += 1
-            v = self.select_leaf(root)
-            evaluation = self.simulate(v)
-            self.backup(v, evaluation)
+            leaf = self.select_leaf(root)
+            q = self.simulate(leaf)
+            self.backup(leaf, q)
 
         L = [n.getExpectedValue() for n in root.children]
         return root.children[L.index(max(L))].action
 
+    def pick_move_policy(self, env):
+        # Policy for simulation, currently set at random
+        return choice(list(range(env.nActions)))
+
     def simulate(self, node):
         """Simulate from the current node"""
-        copy_env = node._environment
+        copy_env = copy.deepcopy(node._environment)
+        simulation_depth = 0
+        rewards = []
+        while not copy_env.isTerminalState() and simulation_depth <= self._max_depth:
+            action = self.pick_move_policy(copy_env)
+            reward = copy_env.act(action)
+            rewards.append(reward)
+            simulation_depth += 1
+
+        discounted_rewards = [(self._gamma ** i) * r for i, r in zip(range(len(rewards)), rewards)]
+        return sum(discounted_rewards)
 
     def select_leaf(self, node):
+        """
+        Find the leaf to expand
+        :param node: node to start from
+        :return: child leaf or terminal node
+        """
         while not node.isTerminal():
             if not node.isFullyExpanded():
                 return self.expand(node)
@@ -104,6 +120,29 @@ class MonteCarloAgent(object):
         return node
 
     def expand(self, node):
-        actions_remaining = node.actions_remaining
+        """
+        Expands node by one random step.
+        :param node: Node to expand
+        :return: child node
+        """
         action = node.actions_remaining.pop()
+        new_env = copy.deepcopy(node._environment)
+        new_env.act(action)
+        child_node = Node(new_env, action=action, parent_agent=self)
+        child_node.parent = node
+        node.children.append(child_node)
+        return child_node
+
+    def backup(self, node, q):
+        """
+        Backup and add all the new q values to the nodes, from the leaf upwards.
+        :param node:
+        :param q:
+        :return:
+        """
+        while node != None:
+            node.Q += q
+            node.N += 1
+            node = node.parent
+
 
