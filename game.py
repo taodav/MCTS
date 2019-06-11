@@ -1,11 +1,12 @@
 import numpy as np
 import copy
 
+
 class GridWorld:
     VALIDATION_MODE = 0
 
     def __init__(self, **kwargs):
-        self._size_maze = 8
+        self._size_maze = kwargs.get('size_maze', 8)
         self._higher_dim_obs = kwargs.get("higher_dim_obs", False)
         self.create_map()
         self.intern_dim = 2
@@ -134,5 +135,44 @@ class GridWorld:
         return self._pos_agent == self._pos_goal
 
 
+
+class GridWorldEngine(GridWorld):
+    def __init__(self, **kwargs):
+        super(GridWorldEngine, self).__init__(**kwargs)
+
+    def act(self, state, action):
+        """
+        Act according to a given state and action. Returns new state
+        :param action:
+        :param state:
+        :return:
+        """
+        pos_agent = np.argwhere(state == 0.5)[0]
+        if (action == 0):
+            if (state[pos_agent[0] - 1, pos_agent[1]] == 0):
+                pos_agent[0] = pos_agent[0] - 1
+        elif (action == 1):
+            if (state[pos_agent[0] + 1, pos_agent[1]] == 0):
+                pos_agent[0] = pos_agent[0] + 1
+        elif (action == 2):
+            if (state[pos_agent[0], pos_agent[1] - 1] == 0):
+                pos_agent[1] = pos_agent[1] - 1
+        elif (action == 3):
+            if (state[pos_agent[0], pos_agent[1] + 1] == 0):
+                pos_agent[1] = pos_agent[1] + 1
+
+        next_state = copy.deepcopy(self._map)
+        next_state[pos_agent[0], pos_agent[1]] = 0.5
+        # There is no reward in this simple environment
+        reward = 0
+
+        if list(pos_agent) == self._pos_goal:
+            reward = 1
+
+        return next_state, reward
+
 if __name__ == "__main__":
-    pass
+    env = GridWorldEngine()
+    state = env.observe()[0]
+    next_state, reward = env.act(state, 1)
+    print("what")
